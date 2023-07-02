@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009" 
+					   xmlns:s="library://ns.adobe.com/flex/spark" 
+					   xmlns:mx="library://ns.adobe.com/flex/mx"
+					   applicationComplete="onInit(event)"
+					   resize="onStageResized()"					   
+					   width="800" height="600" xmlns:ui="com.nana10.hisardutCircleEditor.ui.*">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import com.data.DataRepository;
+			import com.data.EpisodeData;
+			import com.data.MemberData;
+			import com.data.TribeData;
+			
+			import mx.collections.ArrayCollection;
+			import mx.events.FlexEvent;
+			import mx.events.ResizeEvent;
+			
+			import spark.components.RadioButtonGroup;
+			import spark.events.IndexChangeEvent;
+			
+			private var currentFile:File;
+			private var stream:FileStream = new FileStream();
+			private var defaultDirectory:File;
+			
+			[Bindable]
+			private var tribes:ArrayCollection = new ArrayCollection([{label: "באנאו", data: 1, gaveVetoGroup: new RadioButtonGroup(),gotVetoGroup: new RadioButtonGroup(),statueGroup: new RadioButtonGroup(),necklaceGroup: new RadioButtonGroup(), outcastedGroup: new RadioButtonGroup()},
+																	  {label: "מריקודו", data: 2, gaveVetoGroup: new RadioButtonGroup(),gotVetoGroup: new RadioButtonGroup(),statueGroup: new RadioButtonGroup(),necklaceGroup: new RadioButtonGroup(), outcastedGroup: new RadioButtonGroup()},
+																	  {label: "מלאיה", data: 3, gaveVetoGroup: new RadioButtonGroup(),gotVetoGroup: new RadioButtonGroup(),statueGroup: new RadioButtonGroup(),necklaceGroup: new RadioButtonGroup(), outcastedGroup: new RadioButtonGroup()}]);
+			
+			[Bindable]
+			private var members:ArrayCollection = new ArrayCollection([
+																	   {label: "אתי" , id: 1, tribe: 1, active: true},
+							  										   {label: "יאנה" , id: 2, tribe: 1, active: true},
+							  										   {label: "מוראל" , id: 3, tribe: 1, active: true},
+							  										   {label: "יולה" , id: 4, tribe: 1, active: true},
+							  										   {label: "עפרי" , id: 5, tribe: 1, active: true},
+							  									 	   {label: "יונתן" , id: 6, tribe: 1, active: true},
+							  										   {label: "אביב" , id: 7, tribe: 1, active: true},
+							  										   {label: "בן" , id: 8, tribe: 1, active: true},
+							  										   {label: "רועי" , id: 9, tribe: 1, active: true},
+							  										   {label: "גיורא" , id: 10, tribe: 1, active: true},
+																	   
+																	   {label: "אירית" , id: 11, tribe: 2, active: true},
+							  										   {label: "לירון" , id: 12, tribe: 2, active: true},
+							  										   {label: "גב" , id: 13, tribe: 2, active: true},
+							  										   {label: "שונית" , id: 14, tribe: 2, active: true},
+							  										   {label: "אוהד" , id: 15, tribe: 2, active: true},
+							  										   {label: "נטלי" , id: 16, tribe: 2, active: true},
+							  										   {label: "פנינית" , id: 17, tribe: 2, active: true},
+							  										   {label: "יגאל" , id: 18, tribe: 2, active: true},
+							  										   {label: "יניב" , id: 19, tribe: 2, active: true},
+							  										   {label: ".נטלי כ" , id: 20, tribe: 2, active: true}
+							  										   ]);
+		
+			
+			[Bindable]
+			private var episodes:ArrayCollection = new ArrayCollection([]);
+			
+			protected function onInit(event:FlexEvent):void
+			{
+				
+				defaultDirectory = new File("\\\\ntfile-br\\ImageBank\\ארכיון חדש-בבניה\\ערוץ מיירב\\הישרדות\\הישרדות 5\\טבלת מכורים\\הישרדות - ניהול טבלת המכורים");//File.documentsDirectory;
+				stage.align = StageAlign.TOP_RIGHT;
+				height = Capabilities.screenResolutionY - 50;
+			}
+
+			private function onOpen():void
+			{
+				var docFilter:FileFilter = new FileFilter("Data", "*.xml");
+				try
+				{
+					defaultDirectory.browseForOpen("Select Directory", [docFilter]);
+					defaultDirectory.addEventListener(Event.SELECT, directorySelected);
+				}
+				catch (error:Error)
+				{
+					trace("Failed:", error.message)
+				}
+			}
+			
+			private function directorySelected(event:Event):void
+			{
+				defaultDirectory = event.target as File;
+								
+				var stream:FileStream = new FileStream();
+				stream.open(defaultDirectory, FileMode.READ);
+				defaultDirectory.removeEventListener(Event.SELECT, directorySelected);
+				parseData(stream.readUTFBytes(stream.bytesAvailable));
+				
+			}
+			
+			private function parseData(fileData:String):void
+			{
+				var dataRepository:DataRepository = DataRepository.getInstance();
+				dataRepository.parseData(new XML(fileData));
+				
+				var currentEpisode:EpisodeData = dataRepository.getCurrentEpisode();
+				newEpisodeNumber.value = currentEpisode.order;
+				var currentDate:Array = currentEpisode.date.split("/");
+				newEpisodeDate.selectedDate = new Date(currentDate[2],currentDate[1]-1,currentDate[0]);
+				displayTribe(currentEpisode.getTribeByOrder(1));
+				displayTribe(currentEpisode.getTribeByOrder(2));
+				/*for (var i:int = 0; i < dataRepository.totalEpisodes; i++)
+				{
+					var currEpisode:EpisodeData = dataRepository.getEpisodeByIndex(i);
+					episodes.addItem({label: currEpisode.date, data: currEpisode.order});
+				}*/
+			}
+			
+			private function onSave():void
+			{		
+				defaultDirectory.removeEventListener(Event.SELECT, directorySelected);
+				var fileChooser:File;
+				if (currentFile)
+				{
+					fileChooser = currentFile;
+				}
+				else
+				{
+					fileChooser = defaultDirectory;
+				}
+				fileChooser.browseForSave("Save As");
+				fileChooser.addEventListener(Event.SELECT, saveAsFileSelected);
+			}
+			
+			private function saveAsFileSelected(event:Event):void 
+			{
+				currentFile = event.target as File;
+				saveFile();
+				//dataChanged = false;
+				currentFile.removeEventListener(Event.SELECT, saveAsFileSelected);
+			}
+			
+			private function saveFile(event:MouseEvent = null):void 
+			{
+				//if (currentFile) {
+					if (stream != null)	
+					{
+						stream.close();
+					}
+					stream = new FileStream();
+					stream.openAsync(currentFile, FileMode.WRITE);					
+					//stream.addEventListener(IOErrorEvent.IO_ERROR, onSaveError);
+					insertNewEpisode();
+					var str:String = getOutputData();
+					str = str.replace(/\r/g, "\n");
+					str = str.replace(/\n/g, File.lineEnding);
+					stream.writeUTFBytes(str);
+					stream.close();
+					//dataChanged = false;
+				/*} 
+				else
+				{
+					saveAs();
+				}*/
+			}
+			
+			private function insertNewEpisode():void
+			{
+				var tribe1:TribeData = new TribeData(tribes.getItemAt(0).data,activeTribe.selectedIndex + 1 == tribes.getItemAt(0).data);
+				var tribe2:TribeData = new TribeData(tribes.getItemAt(1).data,activeTribe.selectedIndex + 1 == tribes.getItemAt(1).data);
+				var tribe3:TribeData = new TribeData(tribes.getItemAt(2).data,activeTribe.selectedIndex + 1 == tribes.getItemAt(2).data);
+				
+				var currentTribe:TribeData;
+				for (var i:int = 0; i < memberLine.length; i++)
+				{	
+					if (memberLine[i].active)
+					{
+						var memberLocalData:Object = members.getItemAt(i);
+						var memberData:MemberData = new MemberData(memberLocalData.id,memberLine[i].votedTo);					
+						switch (memberLocalData.tribe)
+						{
+							case 1:
+								currentTribe = tribe1;							
+								break;
+							case 2:
+								currentTribe = tribe2;
+								break;
+							case 3:
+								currentTribe = tribe3;
+								break;
+						}
+						currentTribe.members.push(memberData);
+						if (currentTribe.active)
+						{
+							if (memberLine[i].gotVeto) currentTribe.vetoTo = memberData.id;
+							if (memberLine[i].gaveVeto) currentTribe.vetoFrom = memberData.id;
+							if (memberLine[i].statue) currentTribe.statue = memberData.id;
+							if (memberLine[i].necklace) currentTribe.necklace = memberData.id;
+							if (memberLine[i].outcasted) currentTribe.outcasted = memberData.id;
+						}
+					}
+				}
+				var selectedDate:Date = newEpisodeDate.selectedDate;				
+				var episodeData:EpisodeData = new EpisodeData(newEpisodeNumber.value,selectedDate.date+"/"+(selectedDate.month+1)+"/"+selectedDate.getFullYear());
+				if (singleTribe.selected)
+				{
+					episodeData.addTribe(tribe3);
+				}
+				else
+				{
+					episodeData.addTribe(tribe1);
+					episodeData.addTribe(tribe2);
+				}
+				DataRepository.getInstance().addEpisode(episodeData);
+			}
+			
+			private function getOutputData():String
+			{
+				var output:String = "<root>\n";
+				var dataRepository:DataRepository = DataRepository.getInstance();
+				for (var i:int = dataRepository.totalEpisodes - 1; i >=0; i--)
+				{
+					output = output.concat(extractEpisode(dataRepository.getEpisodeByIndex(i)));
+				}
+				output = output.concat("</root>");
+				return output;
+			}
+			
+			private function extractEpisode(episodeData:EpisodeData):String
+			{
+				var output:String = "\t<episode order=\""+episodeData.order+"\" date=\""+episodeData.date+"\" >\n";
+				output = output.concat(extractTribe(episodeData.getTribeByOrder(1)));
+				output = output.concat(extractTribe(episodeData.getTribeByOrder(2)));
+				output = output.concat("\t</episode>\n");
+				return output;
+			}
+			
+			private function extractTribe(tribeData:TribeData):String
+			{
+				var output:String = "";
+				if (tribeData)
+				{
+					output = output.concat("\t\t<tribe id=\""+tribeData.id+"\" vetoFrom=\""+tribeData.vetoFrom+"\" vetoTo=\""+tribeData.vetoTo+"\" statue=\""+tribeData.statue+"\" necklace=\""+tribeData.necklace+"\" active=\""+tribeData.active+"\" outcasted=\""+tribeData.outcasted+"\" >\n");
+					for (var j:int = 0; j < tribeData.members.length; j++)
+					{
+						output = output.concat("\t\t\t<member id=\""+tribeData.members[j].id+"\" votedTo=\""+tribeData.members[j].votedTo+"\" />\n");
+					}
+					output = output.concat("\t\t</tribe>\n");
+				}
+				return output;
+			}
+
+			private var selectedTribe:int;
+			protected function changeTribe(event:IndexChangeEvent):void
+			{
+				selectedTribe = activeTribe.selectedItem.data;
+				for (var i:int = 0; i < memberLine.length; i++)
+				{
+					memberLine[i].controlsEnsabled = memberLine[i].memberTribe == selectedTribe; 
+				}
+			}
+
+
+			protected function memberLine_changeHandler(event:Event):void
+			{
+				if (selectedTribe)
+				{
+					event.target.controlsEnsabled =  event.target.memberTribe == selectedTribe;
+				}
+				for (var i:int = 0; i < members.source.length; i++)
+				{
+					if (members.getItemAt(i).id == event.target.memberId)
+					{
+						members.getItemAt(i).tribe = event.target.memberTribe;
+						break;
+					}
+				}
+				updateMemberLines();
+			}
+			
+			private function updateMemberLines():void
+			{
+				for (var i:int = 0; i < memberLine.length; i++)
+				{
+					memberLine[i].members = members; 
+				}
+			}
+			
+			protected function addEpisode():void
+			{
+				var selectedDate:Date = newEpisodeDate.selectedDate;
+				if (selectedDate)
+				{
+					var newEpisode:Object = {label: selectedDate.date+"/"+(selectedDate.month+1)+"/"+selectedDate.getFullYear(), data: newEpisodeNumber.value}
+					episodes.addItem(newEpisode);
+					//episodesDDL.selectedIndex = episodesDDL.dataProvider.length - 1;
+					editorEnabled = true;
+				}
+			}
+			[Bindable]
+			private var editorEnabled:Boolean = false;
+			/*protected function selectEpisode():void
+			{
+				editorEnabled = true;
+				var currentEpisode:EpisodeData = DataRepository.getInstance().getEpisodeByOrder(episodesDDL.selectedItem.data);
+				displayTribe(currentEpisode.getTribeByOrder(1));
+				displayTribe(currentEpisode.getTribeByOrder(2));
+			}*/
+			
+			private function displayTribe(tribeData:TribeData):void
+			{
+				if (tribeData)
+				{
+					for (var i:int = 0; i < memberLine.length; i++)
+					{
+						var found:Boolean = false;
+						for (var j:int = 0; j < tribeData.members.length; j++)
+						{
+							var memberData:MemberData = tribeData.members[j];
+							if (memberLine[i].memberId == memberData.id)
+							{
+								memberLine[i].memberData = memberData;
+								members[i].tribe = tribeData.id;
+								if (tribeData.outcasted == memberData.id)
+								{
+									memberLine[i].active = members[i].active = false;
+								}
+								else
+								{
+									memberLine[i].active = members[i].active = true;
+								}
+								//if (tribeData.vetoFrom == memberData.id) memberLine[i].gaveVeto = true;
+								//if (tribeData.vetoTo == memberData.id) memberLine[i].gotVeto = true;
+								//if (tribeData.statue == memberData.id) memberLine[i].statue = true;
+								//if (tribeData.necklace == memberData.id) memberLine[i].necklace = true;
+								found = true;
+								break;
+							}
+						}
+						if (!found && (memberLine[i].memberTribe == tribeData.id || tribeData.id == 3))
+						{
+							memberLine[i].active = members[i].active = false;
+						}
+					}
+					updateMemberLines();
+				}
+			}
+			//addEventListener(ResizeEvent.RESIZE, onStageResized);
+			private function onStageResized():void
+			{
+				if (stage)
+				{
+					scrollBar.height = membersContainer.height = stage.stageHeight - membersContainer.y - 25;
+				}
+			}
+		]]>
+	</fx:Script>
+	<s:Button x="29" y="21" label="שמירה" click="onSave()" enabled="{editorEnabled}"/>
+	<s:Button x="129" y="21" label="פתיחה" click="onOpen()"/>
+	<s:Label x="534" y="24" text="הישרדות - עורך טבלת המכורים" fontSize="20" textAlign="right" fontWeight="bold"/>
+	<s:HGroup x="29" y="52" width="761" height="36" gap="5" horizontalAlign="right">
+		<s:CheckBox label="שבט מאוחד" fontSize="16" id="singleTribe"/>
+		<s:DropDownList id="activeTribe" dataProvider="{tribes}" change="changeTribe(event)" enabled="{editorEnabled}" textAlign="right"></s:DropDownList>
+		<s:Label text=":שבט פעיל" fontSize="18" textAlign="right" paddingTop="4" enabled="{editorEnabled}"/>
+		<s:Button label="הוסף" id="newEpisodeBtn" width="50" click="addEpisode()"/>
+		<s:NumericStepper minimum="1" maximum="30" stepSize="1" id="newEpisodeNumber" textAlign="right"/>
+		<mx:DateField id="newEpisodeDate" dayNames="[ראשון,שני,שלישי,רביעי,חמישי,שישי,שבת]" monthNames="[ינואר,פברואר,מרץ,אפריל,מאי,יוני,יולי,אוגוסט,ספטמבר,אוקטובר,נובמבר,דצמבר]" formatString="DD/MM/YYYY" textAlign="right"/>
+		<s:Label text=":פרק חדש" fontSize="18" textAlign="right" paddingTop="4"/>
+		<!--<s:DropDownList id="episodesDDL" dataProvider="{episodes}" change="selectEpisode()" textAlign="right"></s:DropDownList>
+		<s:Label text="תכנית" fontSize="18" y="5" paddingTop="4"/>-->
+	</s:HGroup>
+	<s:Label x="28" y="102" text="שרשרת" fontSize="16"/>
+	<s:Label x="89" y="102" text="פסל" fontSize="16"/>
+	<s:Label x="129" y="102" text="קיבל וטו" fontSize="16"/>
+	<s:Label x="193" y="102" text="נתן וטו" fontSize="16"/>
+	<s:Label x="243" y="102" fontSize="16" text="הודח"/>
+	<s:Label x="379" y="102" text="-הצביע ל" fontSize="16"/>
+	<s:Label x="529" y="102" text="שבט" fontSize="16"/>
+	<s:Label x="589" y="102" text="פעיל" fontSize="16"/>
+	<s:Label x="740" y="102" text="שם" fontSize="16"/>
+	<s:Group  id="membersContainer" x="28" y="127" width="758" height="451" enabled="{editorEnabled}">	
+		<mx:VBox >
+			<mx:Repeater id="membersRepeater" dataProvider="{members}">				
+				<ui:Member id="memberLine" members="{members}" tribes="{tribes}" memberIndex="{membersRepeater.currentIndex}" change="memberLine_changeHandler(event)" />
+			</mx:Repeater>	
+		</mx:VBox>	
+	</s:Group>
+	<s:VScrollBar x="10" y="127" height="451" viewport="{membersContainer}" id="scrollBar"/>
+	<mx:HRule x="28" y="125" width="750"/>
+</s:WindowedApplication>

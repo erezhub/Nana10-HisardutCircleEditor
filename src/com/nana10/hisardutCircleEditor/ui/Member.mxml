@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009" 
+		 xmlns:s="library://ns.adobe.com/flex/spark" 
+		 xmlns:mx="library://ns.adobe.com/flex/mx" width="750" height="40">
+	<fx:Declarations>
+		<!-- Place non-visual elements (e.g., services, value objects) here -->		
+	</fx:Declarations>
+	<fx:Script>
+		<![CDATA[
+			import com.data.MemberData;
+			
+			import mx.collections.ArrayCollection;
+			
+			import spark.components.RadioButtonGroup;
+			import spark.events.IndexChangeEvent;
+						
+			[Bindable]
+			private var _tribes:ArrayCollection;	
+			public function set tribes(value:ArrayCollection):void
+			{
+				_tribes = value;
+				if (_memberIndex > -1 && _memberTribe)
+				{
+					setGroups();
+				}
+			}
+						
+			[Bindable]
+			private var _members:ArrayCollection;
+			private var totalMembers:int;
+			private var allMembers:ArrayCollection;
+			public function set members(value:ArrayCollection):void
+			{
+				allMembers = value;
+				_members = new ArrayCollection(value.source.slice());
+				if (_memberIndex > -1)
+				{
+					memberName = _members[_memberIndex].label;
+					_memberTribe = _members[_memberIndex].tribe;
+					_memberId = _members[_memberIndex].id;
+					removeMembers();
+					if (_tribes != null)
+					{
+						setGroups();
+					}
+				}
+			}
+						
+			private var _memberIndex:int = -1;
+			private var _memberId:int;
+			public function set memberIndex(value:int):void
+			{
+				if (_members)
+				{
+					memberName = _members[value].label;
+					_memberTribe = _members[value].tribe;
+					_memberId = _members[value].id;
+					removeMembers();
+				}
+				if (_tribes)
+				{
+					try
+					{
+						setGroups();
+					}
+					catch (e:Error)	{}
+				}
+				_memberIndex = value;
+			}
+			
+			public function get memberIndex():int
+			{
+				return _memberIndex;
+			}
+			
+			public function set memberData(data:MemberData):void
+			{
+				active = true;
+				/*for (var i:int = 0; i < _members.length; i++)
+				{
+					if (_members[i].id == data.votedTo)
+					{
+						votedToDDL.selectedIndex = i;
+						break;
+					}
+				}*/
+			}
+			
+			[Bindable]
+			private var memberEnabled:Boolean = true;
+			[Bindable]
+			private var activeCBEnabled:Boolean = true;
+			[Bindable]
+			private var tribesDDLenabled:Boolean = true;
+			public function set controlsEnsabled(value:Boolean):void
+			{
+				if (active) memberEnabled = value; 
+				activeCBEnabled = value;
+			}
+			
+			public function get memberTribe():int
+			{
+				return _memberTribe;
+			}
+			
+			public function get memberId():int
+			{
+				return _memberId;
+			}
+			
+			private function setGroups():void
+			{
+				gaveVetoGroup = _tribes[_memberTribe-1].gaveVetoGroup;
+				gotVetoGroup = _tribes[_memberTribe-1].gotVetoGroup;
+				statueGroup = _tribes[_memberTribe-1].statueGroup;
+				necklaceGroup = _tribes[_memberTribe-1].necklaceGroup;
+				outcastedGroup = _tribes[memberTribe-1].outcastedGroup;
+			}
+			
+			private function removeMembers():void
+			{
+				totalMembers = _members.length;
+				for (var i:int = 0; i < totalMembers; i++)
+				{
+					if (_members[i].tribe != _memberTribe || _members[i].id == _memberId || _members[i].active == false)
+					{
+						_members.removeItemAt(i);
+						i--;
+						totalMembers-=1;
+					}
+				}
+			}
+			
+			[Bindable]
+			private var memberName:String;
+			[Bindable]
+			private var _memberTribe:int;
+			[Bindable]
+			private var gaveVetoGroup:RadioButtonGroup;
+			[Bindable]
+			private var gotVetoGroup:RadioButtonGroup;
+			[Bindable]
+			private var statueGroup:RadioButtonGroup;
+			[Bindable]
+			private var necklaceGroup:RadioButtonGroup;
+			[Bindable]
+			private var outcastedGroup:RadioButtonGroup;
+
+			protected function tribeCB_changeHandler(event:IndexChangeEvent):void
+			{
+				_memberTribe = tribeDDL.selectedIndex + 1;
+				setGroups();
+				_members = new ArrayCollection(allMembers.source.slice());
+				removeMembers();
+				dispatchEvent(new Event(Event.CHANGE));
+			}
+			
+			protected function toggleActive():void
+			{
+				tribesDDLenabled = memberEnabled = activeCB.selected;				
+			}
+			
+			public function get active():Boolean
+			{
+				return activeCB.selected;
+			}
+			
+			public function set active(value:Boolean):void
+			{
+				activeCB.selected = value;
+				toggleActive();
+			}
+			
+			public function get votedTo():int
+			{
+				if (votedToDDL.selectedItem) return votedToDDL.selectedItem.id;
+				return 0;
+			}
+			
+			public function get gaveVeto():Boolean
+			{
+				return gaveVetoRB.selected;
+			}
+			
+			public function set gaveVeto(value:Boolean):void
+			{
+				gaveVetoRB.selected = value;
+			}
+			
+			public function get gotVeto():Boolean
+			{
+				return gotVetoRB.selected;
+			}
+			
+			public function set gotVeto(value:Boolean):void
+			{
+				gotVetoRB.selected = value;
+			}
+			
+			public function get statue():Boolean
+			{
+				return statueRB.selected;
+			}
+			
+			public function set statue(value:Boolean):void
+			{
+				statueRB.selected = value;
+			}
+			
+			public function get necklace():Boolean
+			{
+				return necklaceRB.selected;
+			}
+			
+			public function set necklace(value:Boolean):void
+			{
+				necklaceRB.selected = value;
+			}
+			
+			public function get outcasted():Boolean
+			{
+				return outcastedRB.selected;
+			}
+			
+			public function set outcasted(value:Boolean):void
+			{
+				outcastedRB.selected = value;
+			}
+
+		]]>
+	</fx:Script>
+	<fx:Metadata>
+		[Event (name="change",type="flash.events.Event")]	
+	</fx:Metadata>
+	
+	<s:RadioButton x="16" y="14" id="necklaceRB" group="{necklaceGroup}" enabled="{memberEnabled}"/>
+	<s:RadioButton x="60" y="14" id="statueRB" group="{statueGroup}" enabled="{memberEnabled}"/>
+	<s:RadioButton x="115" y="14" id="gotVetoRB" group="{gotVetoGroup}" enabled="{memberEnabled}"/>
+	<s:RadioButton x="168" y="14" id="gaveVetoRB" group="{gaveVetoGroup}" enabled="{memberEnabled}"/>
+	<s:RadioButton x="219" y="14" id="outcastedRB" group="{outcastedGroup}" enabled="{memberEnabled}"/>
+	<s:DropDownList x="254" y="11" id="votedToDDL" width="150" textAlign="right" dataProvider="{_members}" enabled="{memberEnabled}"></s:DropDownList>
+	<s:DropDownList x="436" y="11" id="tribeDDL" dataProvider="{_tribes}" selectedIndex="{_memberTribe-1}"  textAlign="right" change="tribeCB_changeHandler(event)" enabled="{tribesDDLenabled}"></s:DropDownList>
+	<s:CheckBox x="569" y="12" id="activeCB" enabled="{activeCBEnabled}" selected="true" change="toggleActive()"/>
+	<s:Label x="591" y="14" text="{memberName}" id="memberNameField" fontSize="16" width="145" textAlign="right"/>
+	
+</s:Group>
